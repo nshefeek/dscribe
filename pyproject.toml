@@ -1,0 +1,24 @@
+[project]
+name = "dscribe"
+version = "0.1.0"
+description = "Default template for PDM package"
+authors = [
+    {name = "Shefeek Najeeb", email = "connectshefeek@gmail.com"},
+]
+dependencies = [
+    "pydantic[standard]>=2.8.2",
+    "pydantic-settings>=2.4.0",
+    "aiortc>=1.9.0",
+]
+requires-python = ">=3.12"
+readme = "README.md"
+license = {text = "MIT"}
+
+[build-system]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
+
+
+[tool.pdm]
+distribution = true
+
