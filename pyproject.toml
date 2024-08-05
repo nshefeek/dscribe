@@ -9,6 +9,7 @@ dependencies = [
     "pydantic[standard]>=2.8.2",
     "pydantic-settings>=2.4.0",
     "aiortc>=1.9.0",
+    "fastapi[standard]>=0.112.0",
 ]
 requires-python = ">=3.12"
 readme = "README.md"
@@ -18,7 +19,12 @@ license = {text = "MIT"}
 requires = ["pdm-backend"]
 build-backend = "pdm.backend"
 
-
 [tool.pdm]
 distribution = true
+
+
+[tool.pdm.scripts]
+server = "uvicorn --reload dscribe.main:app"
+client = "npm run --prefix src/dscribe/static/dscribe dev"
+build-client = "npm run --prefix src/dscribe/static/dscribe build"
 
