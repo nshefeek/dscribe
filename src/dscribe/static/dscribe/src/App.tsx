@@ -38,7 +38,11 @@ const App: React.FC = () => {
       const remoteDesc = new RTCSessionDescription(message);
       await peerConnectionRef.current?.setRemoteDescription(remoteDesc);
     } else if (message.type == "ice-candidate") {
-      await peerConnectionRef.current?.addIceCandidate(message.candidate);
+      if (message.candidate.candidate === "") {
+        console.log("End of candidate gathering");
+      } else {
+        await peerConnectionRef.current?.addIceCandidate(message.candidate);
+      }
     }
   }, []);
 
@@ -60,7 +64,11 @@ const App: React.FC = () => {
         if (event.candidate) {
           wsRef.current?.send(JSON. stringify({
             type: "ice-candidate",
-            candidate: event.candidate
+            candidate: {
+              candidate: event.candidate.candidate,
+              sdpMid: event.candidate.sdpMid,
+              sdpMLineIndex: event.candidate.sdpMLineIndex
+            }
           }));
         }
       };

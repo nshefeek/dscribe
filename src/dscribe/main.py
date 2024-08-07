@@ -7,11 +7,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from starlette.types import ASGIApp, Receive, Scope, Send
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from dscribe.core.config import Settings
-from dscribe.api.server import api
-from dscribe.webrtc.routes import webrtc_app
+from dscribe.api.routes import api_router
+from dscribe.webrtc.routes import webrtc_router
 
 
 settings = Settings()
@@ -35,34 +35,37 @@ async def custom_404_handler(request: Request, exc: Exception):
 frontend = FastAPI(root_path="")
 frontend.add_middleware(GZipMiddleware, minimum_size=1000)
 
+# class DefaultPageMiddleware(BaseHTTPMiddleware):
+#     async def dispatch(self, request: Request, call_next: Any) -> Any:
+#         response = await call_next(request)
+#         if response.status_code == 404:
+#             if settings.STATIC_DIR:
+#                 return FileResponse(path.join(settings.STATIC_DIR, "index.html"))
+#         return response
+
 if settings.STATIC_DIR and path.isdir(settings.STATIC_DIR):
-    frontend.mount("/", StaticFiles(directory=settings.STATIC_DIR), name="frontend")
+    frontend.mount("/", StaticFiles(directory=settings.STATIC_DIR), name="app")
+        
+@frontend.middleware("http")
+async def default_page(request, call_next):
+    response = await call_next(request)
+    if response.status_code == 404:
+        if settings.STATIC_DIR:
+            return FileResponse(path.join(settings.STATIC_DIR, "index.html"))
+    return response
 
+api = FastAPI(
+    title="dScribe",
+    description="Welcome to dScribe's API documentation! Here you will able to discover all of the ways you can interact with the dScribe API.",
+    root_path="/api/v1",
+    docs_url=None,
+    openapi_url="/docs/openapi.json",
+    redoc_url="/docs",
+)
+api.add_middleware(GZipMiddleware, minimum_size=1000)
+api.include_router(api_router)
 
-class HTTPMiddleware:
-    def __init__(self, app: ASGIApp) -> None:
-        self.app = app
+app.include_router(webrtc_router)
 
-    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> Any:
-        if scope["type"] == "http":
-            request = Request(scope, receive=receive)
-            response = await self.app(scope, receive, send)
-            if response.status_code == 404:
-                if settings.STATIC_DIR:
-                    return await FileResponse(path.join(settings.STATIC_DIR, "index.html"))(scope, receive, send)
-            return await response(scope, receive, send)
-        await self.app(scope, receive, send)
-
-frontend.add_middleware(HTTPMiddleware)
-
-# @frontend.middleware("http")
-# async def default_page(request, call_next):
-#     response = await call_next(request)
-#     if response.status_code == 404:
-#         if settings.STATIC_DIR:
-#             return FileResponse(path.join(settings.STATIC_DIR, "index.html"))
-#     return response
-
-app.mount("", app=frontend)
 app.mount("/api/v1", app=api)
-app.mount("/ws", app=webrtc_app)
+app.mount("/", app=frontend)
